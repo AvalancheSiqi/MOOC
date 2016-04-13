@@ -1,5 +1,5 @@
 from numpy import loadtxt, ones, zeros, hstack, dot, linspace, logspace
-from pylab import scatter, show, title, xlabel, ylabel, plot, contour
+from pylab import show, figure, subplot
 
 # Machine Learning by Andrew Ng on Coursera week 1
 # Linear Regression with one variable
@@ -8,17 +8,22 @@ def main():
     # Load the dataset
     dataset = loadtxt('datasets/ex1data1.txt', delimiter=',')
 
-    # Plot the dataset
-    scatter(dataset[:, 0], dataset[:, 1], marker='o', c='b')
-    title('Profit distribution')
-    xlabel('Population of City in 10,000s')
-    ylabel('Profit in $10,000s')
+    # Prepare the canvas
+    figure(figsize=(13, 5), dpi=100)
+    p1 = subplot(121)
+    p2 = subplot(122)
 
-    # Manipulate the dataset, add ones to its left
     (m, n) = dataset.shape
     X = dataset[:, :n-1].reshape(m, n-1)
     y = dataset[:, n-1].reshape(m, 1)
 
+    # Plot the dataset
+    p1.scatter(X, y, marker='x', c='r')
+    p1.set_title('Profit distribution')
+    p1.set_xlabel('Population of City in 10,000s')
+    p1.set_ylabel('Profit in $10,000s')
+
+    # Manipulate the dataset, add ones to its left
     X = hstack((ones(shape=(m, 1)), X))
     theta = zeros(shape=(n, 1))
 
@@ -29,32 +34,31 @@ def main():
     theta, J_history = gradient_descent(X, y, theta, alpha, iter)
 
     pred = X.dot(theta).flatten()
-    plot(X[:, 1:], pred)
+    p1.plot(X[:, 1:], pred)
+
+    # Grid over which we will calculate J
+    theta0_vals = linspace(-10, 10, 100)
+    theta1_vals = linspace(-1, 4, 100)
+
+    # initialize J_vals to a matrix of 0's
+    J_vals = zeros(shape=(theta0_vals.size, theta1_vals.size))
+
+    # Fill out J_vals
+    for t1, element1 in enumerate(theta0_vals):
+        for t2, element2 in enumerate(theta1_vals):
+            J_vals[t1, t2] = compute_cost(X, y, [[element1], [element2]])
+
+    # Contour plot
+    J_vals = J_vals.T
+    # Plot J_vals as 15 contours spaced logarithmically between 0.01 and 100
+    # print J_vals
+    p2.contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
+    p2.set_title('Contour, showing minimum')
+    p2.set_xlabel('theta_0')
+    p2.set_ylabel('theta_1')
+    p2.scatter(theta[0][0], theta[1][0], marker='x', color='r')
     show()
 
-    # # Grid over which we will calculate J
-    # theta0_vals = linspace(-10, 10, 100)
-    # theta1_vals = linspace(-1, 4, 100)
-    #
-    # # initialize J_vals to a matrix of 0's
-    # J_vals = zeros(shape=(theta0_vals.size, theta1_vals.size))
-    #
-    # # Fill out J_vals
-    # for t1, element in enumerate(theta0_vals):
-    #     for t2, element2 in enumerate(theta1_vals):
-    #         thetaT = zeros(shape=(2, 1))
-    #         thetaT[0][0] = element
-    #         thetaT[1][0] = element2
-    #         J_vals[t1, t2] = compute_cost(X, y, thetaT)
-    #
-    # # Contour plot
-    # J_vals = J_vals.T
-    # # Plot J_vals as 15 contours spaced logarithmically between 0.01 and 100
-    # contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
-    # xlabel('theta_0')
-    # ylabel('theta_1')
-    # scatter(theta[0][0], theta[1][0])
-    # show()
 
 # Evaluate the cost of linear regression
 def compute_cost(X, y, theta):
@@ -67,9 +71,10 @@ def compute_cost(X, y, theta):
     '''
     m = y.size
     pred = dot(X, theta)
-    sq_errors = (pred-y)**2
-    J = 1.0/2/m*sq_errors.sum()
+    sq_errors = sum((pred-y)**2)
+    J = 1.0/2/m*(sq_errors)
     return J
+
 
 # Gradient Descent module
 def gradient_descent(X, y, theta, alpha, iter):
@@ -87,11 +92,12 @@ def gradient_descent(X, y, theta, alpha, iter):
 
     for i in range(iter):
         pred = dot(X, theta)
-        errors = dot(X.transpose(), (pred - y))
+        errors = dot(X.T, (pred - y))
         theta = theta - 1.0*alpha/m*errors
         J_history[i, 0] = compute_cost(X, y, theta)
 
     return theta, J_history
+
 
 if __name__ == '__main__':
     main()
