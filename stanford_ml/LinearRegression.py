@@ -1,5 +1,6 @@
 from numpy import loadtxt, ones, zeros, hstack, dot, linspace, logspace
 from pylab import show, figure, subplot
+from sklearn import linear_model
 
 # Machine Learning by Andrew Ng on Coursera week 1
 # Linear Regression with one variable
@@ -9,9 +10,10 @@ def main():
     dataset = loadtxt('datasets/ex1data1.txt', delimiter=',')
 
     # Prepare the canvas
-    figure(figsize=(13, 5), dpi=100)
-    p1 = subplot(121)
-    p2 = subplot(122)
+    figure(figsize=(12, 7), dpi=100)
+    p1 = subplot(221)
+    p2 = subplot(222)
+    p3 = subplot(212)
 
     (m, n) = dataset.shape
     X = dataset[:, :n-1].reshape(m, n-1)
@@ -22,6 +24,11 @@ def main():
     p1.set_title('Profit distribution')
     p1.set_xlabel('Population of City in 10,000s')
     p1.set_ylabel('Profit in $10,000s')
+
+    p2.scatter(X, y, marker='x', c='r')
+    p2.set_title('Fit by sklearn linear regression')
+    p2.set_xlabel('Population of City in 10,000s')
+    p2.set_ylabel('Profit in $10,000s')
 
     # Manipulate the dataset, add ones to its left
     X = hstack((ones(shape=(m, 1)), X))
@@ -35,6 +42,11 @@ def main():
 
     pred = X.dot(theta).flatten()
     p1.plot(X[:, 1:], pred)
+
+    # Leverage linear regression model in sklearn package
+    lr = linear_model.LinearRegression()
+    lr.fit(X, y)
+    p2.plot(X[:, 1:], lr.predict(X))
 
     # Grid over which we will calculate J
     theta0_vals = linspace(-10, 10, 100)
@@ -52,11 +64,11 @@ def main():
     J_vals = J_vals.T
     # Plot J_vals as 15 contours spaced logarithmically between 0.01 and 100
     # print J_vals
-    p2.contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
-    p2.set_title('Contour, showing minimum')
-    p2.set_xlabel('theta_0')
-    p2.set_ylabel('theta_1')
-    p2.scatter(theta[0][0], theta[1][0], marker='x', color='r')
+    p3.contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
+    p3.set_title('Contour, showing minimum')
+    p3.set_xlabel('theta_0')
+    p3.set_ylabel('theta_1')
+    p3.scatter(theta[0][0], theta[1][0], marker='x', color='r')
     show()
 
 
