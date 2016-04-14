@@ -1,4 +1,4 @@
-from numpy import loadtxt, ones, zeros, hstack, dot, linspace, logspace
+from numpy import loadtxt, ones, zeros, hstack, dot, linspace, logspace, mat
 from pylab import show, figure, subplot
 from sklearn import linear_model
 
@@ -28,6 +28,8 @@ def main():
     for i in (p1, p2):
         i.scatter(X, y, marker='x', c='r')
         i.set_title('Profit distribution')
+        i.set_xlim([4, 24])
+        i.set_ylim([-5, 25])
         i.set_xlabel('Population of City in 10,000s')
         i.set_ylabel('Profit in $10,000s')
 
@@ -45,22 +47,20 @@ def main():
     p3.set_xlabel('Iteration number')
     p3.set_ylabel('Cost function value')
     p3.plot(range(iteration), J_history)
-    p3.scatter(10, J_history[10], marker='o', color='k')
-    p3.scatter(100, J_history[100], marker='o', color='k')
-    p3.scatter(1000, J_history[1000], marker='o', color='k')
+    points1 = [10, 100, 1000]
+    p3.scatter(points1, J_history[points1], marker='o', color='k')
 
     # Figure1: Leverage gradient descent
     pred = X.dot(theta)
     p1.plot(X[:, 1], pred)
-    p1.scatter(3.5, dot([1, 3.5], theta), marker='o', color='k')
-    p1.scatter(7, dot([1, 7], theta), marker='o', color='k')
+    points2 = mat('1, 7; 1, 15')
+    p1.scatter(points2[:, 1], dot(points2, theta).flatten(), marker='o', color='k')
 
     # Figure2: Leverage linear regression model in sklearn package
     lr = linear_model.LinearRegression()
     lr.fit(X, y)
     p2.plot(X[:, 1], lr.predict(X))
-    p2.scatter(3.5, lr.predict([[1, 3.5]]), marker='o', color='k')
-    p2.scatter(7, lr.predict([[1, 7]]), marker='o', color='k')
+    p2.scatter(points2[:, 1], lr.predict(points2), marker='o', color='k')
 
     # Figure4: Contour figure with respect to theta_0 and theta_1
     # Grid over which we will calculate J
@@ -104,7 +104,7 @@ def compute_cost(X, y, theta):
 
 
 # Gradient Descent module
-def gradient_descent(X, y, theta, alpha, iter):
+def gradient_descent(X, y, theta, alpha, iteration):
     '''
     Conduct gradient descent
     :param X: training matrix
@@ -115,9 +115,9 @@ def gradient_descent(X, y, theta, alpha, iter):
     :return: hypothesis / history list of cost function value
     '''
     m = y.size
-    J_history = zeros(shape=(iter, 1))
+    J_history = zeros(shape=(iteration, 1))
 
-    for i in range(iter):
+    for i in range(iteration):
         pred = dot(X, theta)
         errors = dot(X.T, (pred - y))
         theta = theta - 1.0*alpha/m*errors
