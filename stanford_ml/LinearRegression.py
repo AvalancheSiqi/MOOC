@@ -13,7 +13,8 @@ def main():
     figure(figsize=(12, 7), dpi=100)
     p1 = subplot(221)
     p2 = subplot(222)
-    p3 = subplot(212)
+    p3 = subplot(223)
+    p4 = subplot(224)
 
     (m, n) = dataset.shape
     X = dataset[:, :n-1].reshape(m, n-1)
@@ -39,14 +40,25 @@ def main():
     alpha = 0.01
 
     theta, J_history = gradient_descent(X, y, theta, alpha, iter)
+    p3.set_title('Cost function value history')
+    p3.set_xlabel('Iteration number')
+    p3.set_ylabel('Cost function value')
+    p3.plot(range(iter), J_history)
+    p3.scatter(10, J_history[10], marker='o', color='k')
+    p3.scatter(100, J_history[100], marker='o', color='k')
+    p3.scatter(1000, J_history[1000], marker='o', color='k')
 
     pred = X.dot(theta).flatten()
     p1.plot(X[:, 1:], pred)
+    p1.scatter(3.5, dot([1, 3.5], theta), marker='o', color='k')
+    p1.scatter(7, dot([1, 7], theta), marker='o', color='k')
 
     # Leverage linear regression model in sklearn package
     lr = linear_model.LinearRegression()
     lr.fit(X, y)
     p2.plot(X[:, 1:], lr.predict(X))
+    p2.scatter(3.5, lr.predict([[1, 3.5]]), marker='o', color='k')
+    p2.scatter(7, lr.predict([[1, 7]]), marker='o', color='k')
 
     # Grid over which we will calculate J
     theta0_vals = linspace(-10, 10, 100)
@@ -64,11 +76,11 @@ def main():
     J_vals = J_vals.T
     # Plot J_vals as 15 contours spaced logarithmically between 0.01 and 100
     # print J_vals
-    p3.contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
-    p3.set_title('Contour, showing minimum')
-    p3.set_xlabel('theta_0')
-    p3.set_ylabel('theta_1')
-    p3.scatter(theta[0][0], theta[1][0], marker='x', color='r')
+    p4.contour(theta0_vals, theta1_vals, J_vals, logspace(-2, 3, 20))
+    p4.set_title('Contour, showing minimum')
+    p4.set_xlabel('theta_0')
+    p4.set_ylabel('theta_1')
+    p4.scatter(theta[0][0], theta[1][0], marker='x', color='r')
     show()
 
 
