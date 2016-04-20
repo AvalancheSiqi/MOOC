@@ -1,6 +1,7 @@
 import numpy as np
 from pylab import show, figure
 from sklearn import linear_model
+from scipy import optimize
 
 # Machine Learning by Andrew Ng on Coursera week 2
 # Logistic Regression
@@ -14,28 +15,31 @@ def main():
     y = dataset[:, n-1].reshape(m, 1)
 
     # Prepare the canvas
-    # fig = figure(figsize=(14, 6), dpi=100)
-    # p1 = fig.add_subplot(121)
+    fig = figure(figsize=(14, 6), dpi=100)
+    p1 = fig.add_subplot(121)
     # p2 = fig.add_subplot(122)
 
     # Plot all points
-    # pos = np.where(y == 1)
-    # neg = np.where(y == 0)
-    # pos_points = p1.scatter(X[pos[0]].T[0], X[pos[0]].T[1], marker='o', c='y')
-    # neg_points = p1.scatter(X[neg[0]].T[0], X[neg[0]].T[1], marker='x', c='k')
-    # p1.set_xlabel('Exam1 score')
-    # p1.set_ylabel('Exam2 score')
-    # p1.legend([pos_points, neg_points], ['Admitted', 'Not Admitted'])
+    pos = np.where(y == 1)
+    neg = np.where(y == 0)
+    pos_points = p1.scatter(X[pos[0]].T[0], X[pos[0]].T[1], marker='o', c='y')
+    neg_points = p1.scatter(X[neg[0]].T[0], X[neg[0]].T[1], marker='x', c='k')
+    p1.set_xlabel('Exam1 score')
+    p1.set_ylabel('Exam2 score')
+    p1.legend([pos_points, neg_points], ['Admitted', 'Not Admitted'])
 
     # Add ones to its left
     X = np.hstack((np.ones(shape=(m, 1)), X))
-    theta = np.zeros(shape=(n, 1))
+    theta = np.ones(shape=(n, 1))
 
     # Parameters for gradient descent
-    iteration = 10000000
-    alpha = 0.001
-    theta, J_history = gradient_descent(X, y, theta, alpha, iteration)
-    print 'Cost at initial theta (zeros): %f'%J_history[0]
+    # iteration = 1000000
+    # alpha = 0.001
+    # theta, J_history = gradient_descent(X, y, theta, alpha, iteration)
+    # print 'Cost at initial theta (zeros): %f'%J_history[0]
+
+    theta = optimize.fmin_bfgs(compute_cost, theta, fprime=grad, args=(X, y))
+
     print 'Gradient at final theta:'
     print theta
 
@@ -49,8 +53,8 @@ def main():
     acc = (((sigmoid(np.dot(X, theta))>=0.5).astype(int) == y.ravel()).astype(int).mean()*100)
     print 'Train Accuracy: %.4f\n' % acc
 
-    # a, b = plot_db_points(X, theta)
-    # p1.plot(a, b)
+    a, b = plot_db_points(X, theta.reshape(n, 1))
+    p1.plot(a, b)
 
     # Figure2: Monitor of cost function value
     # p2.set_title('Cost function value history')
@@ -62,7 +66,7 @@ def main():
     # for x, y in zip(points, J_history[points]):
     #     p2.annotate(y, xy=(x, y), ha='left', va='bottom')
 
-    # show()
+    show()
 
 
 def sigmoid(X):
@@ -74,7 +78,7 @@ def sigmoid(X):
     return 1.0 / (1 + np.exp(-X))
 
 
-def compute_cost(X, y, theta):
+def compute_cost(theta, X, y):
     '''
     Compute cost function for logistic regression
     :param X: training matrix
@@ -108,6 +112,12 @@ def gradient_descent(X, y, theta, alpha, iteration):
         J_history[i, 0] = compute_cost(X, y, theta)
 
     return theta, J_history
+
+
+def grad(theta, X, y):
+    pred = sigmoid(np.dot(X, theta)).reshape(y.size, 1)
+    error = np.dot(X.T, (pred - y))
+    return (error / y.size).flatten()
 
 
 # Plot decision boundary two end points
