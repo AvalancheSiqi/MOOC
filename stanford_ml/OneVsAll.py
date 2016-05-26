@@ -19,6 +19,7 @@ def main():
     rand_idx = np.random.permutation(m)
     sel = X[rand_idx[:100]][:]
     display_data(sel)
+    plt.show()
 
 
 def display_data(X, example_width=None):
@@ -51,8 +52,9 @@ def display_data(X, example_width=None):
                 = X[curr_ex].reshape(example_height, example_width)/max_val
             curr_ex += 1
 
-    # sio.savemat('datasets/temp.mat', {'X':display_array})
-    plt.figure()
+    # Plot the image
+    plt.imshow(display_array.T)
+    return
 
 
 if __name__ == '__main__':
