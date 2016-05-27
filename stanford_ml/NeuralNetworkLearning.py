@@ -19,13 +19,17 @@ def main():
     dataset = sio.loadmat('datasets/ex4data1.mat')
     X = dataset['X']
     y = dataset['y']
-    num_labels = 10
     m, n = X.shape
+
+    # Transfer y to matrix y_trans where the i-th column corresponds to number i
+    y_trans = np.zeros(shape=(m, num_labels))
+    for i in range(m):
+        y_trans[i, y[i] - 1] = 1
 
     # Random select 100 data points to display
     rand_idx = np.random.permutation(m)
     sel = X[rand_idx[:100]][:]
-    # display_data(sel)
+    display_data(sel)
 
     # == == == == == == == == Part 2: Initializing Parameters == == == == == == = #
     print "Initializing Neural Network Parameters ...\n"
@@ -37,14 +41,15 @@ def main():
     # == == == == == == == == Part 3: Training NN == == == == == == = #
     print "Training Neural Network...\n"
     lam = 1
-    nn_params, f, grad = optimize.fmin_l_bfgs_b(nn_cost, initial_nn_params, fprime=nn_grad,
-                                       args=(input_layer_size, hidden_layer_size, num_labels, X, y, lam), maxiter=100)
+    iteration = 50
+    nn_params, cost_min, _ = optimize.fmin_l_bfgs_b(nn_cost, initial_nn_params, fprime=nn_grad,
+                                                    args=(input_layer_size, hidden_layer_size, num_labels, X, y_trans, lam),
+                                                    maxiter=iteration)
 
     theta1 = nn_params[:hidden_layer_size * (input_layer_size + 1)].reshape(hidden_layer_size, (input_layer_size + 1))
     theta2 = nn_params[hidden_layer_size * (input_layer_size + 1):].reshape(num_labels, (hidden_layer_size + 1))
     pred = predict(theta1, theta2, X)
     print "\nTraining Set Accuracy: %.4f\n" % (np.mean(pred == y.ravel()) * 100)
-    return
 
 
 def display_data(X, example_width=None):
@@ -90,6 +95,12 @@ def display_data(X, example_width=None):
 
 
 def rand_initialize_weights(l_in, l_out):
+    """
+    Initialize random weights for NN
+    :param l_in: input layer size
+    :param l_out: output layer size
+    :return: random matrix with all values bounded within epsilon
+    """
     epsilon = 0.12
     return np.random.random((l_out, l_in+1))*2*epsilon - epsilon
 
@@ -110,34 +121,39 @@ def sigmoid_gradient(z):
     return sigmoid(z)*(1-sigmoid(z))
 
 
-def nn_cost(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, lam):
+def unroll_params(nn_params, input_layer_size, hidden_layer_size, num_labels):
+    """
+    Unroll parameters array to 2D matrix
+    """
     # Reshape nn_params back to parameters theta1 and theta2
-    theta1 = nn_params[:hidden_layer_size*(input_layer_size+1)].reshape(hidden_layer_size, (input_layer_size+1))
-    theta2 = nn_params[hidden_layer_size*(input_layer_size+1):].reshape(num_labels, (hidden_layer_size + 1))
+    theta1 = nn_params[:hidden_layer_size * (input_layer_size + 1)].reshape(hidden_layer_size, (input_layer_size + 1))
+    theta2 = nn_params[hidden_layer_size * (input_layer_size + 1):].reshape(num_labels, (hidden_layer_size + 1))
+    return theta1, theta2
+
+
+def nn_cost(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y_trans, lam):
+    """
+    Cost function for neural network learning
+    """
+    theta1, theta2 = unroll_params(nn_params, input_layer_size, hidden_layer_size, num_labels)
 
     m, n = X.shape
     hidden = sigmoid(np.hstack((np.ones(shape=(m, 1)), X)).dot(theta1.T))
     output = sigmoid(np.hstack((np.ones(shape=(m, 1)), hidden)).dot(theta2.T))
 
-    y_trans = np.zeros(shape=(m, num_labels))
-    for i in range(m):
-        y_trans[i, y[i]-1] = 1
-
-    cost = -1.0/m*(y_trans*np.log(output) + (1-y_trans)*np.log(1-output)) \
+    cost = -1.0/m*(y_trans*np.log(output) + (1-y_trans)*np.log(1-output)).sum() \
            + lam/2.0/m*((theta1[:, 1:]*theta1[:, 1:]).sum() + (theta2[:, 1:]*theta2[:, 1:]).sum())
     return cost
 
 
-def nn_grad(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, lam):
-    # Reshape nn_params back to parameters theta1 and theta2
-    theta1 = nn_params[:hidden_layer_size * (input_layer_size + 1)].reshape(hidden_layer_size, (input_layer_size + 1))
-    theta2 = nn_params[hidden_layer_size * (input_layer_size + 1):].reshape(num_labels, (hidden_layer_size + 1))
+def nn_grad(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y_trans, lam):
+    """
+    Backpropagation implementation, gradient function for NN weights
+    """
+    theta1, theta2 = unroll_params(nn_params, input_layer_size, hidden_layer_size, num_labels)
 
     m, n = X.shape
     delta1, delta2 = 0, 0
-    y_trans = np.zeros(shape=(m, num_labels))
-    for i in range(m):
-        y_trans[i, y[i] - 1] = 1
 
     for i in range(m):
         a1 = X[i, :].reshape(1, n)    # 1 x 400
@@ -160,6 +176,9 @@ def nn_grad(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, la
 
 
 def predict(theta1, theta2, X):
+    """
+    Predict with 3 layers NN and input matrix X
+    """
     m, n = X.shape
     a2 = sigmoid(np.hstack((np.ones(shape=(m, 1)), X)).dot(theta1.T))
     a3 = sigmoid(np.hstack((np.ones(shape=(m, 1)), a2)).dot(theta2.T))
