@@ -163,8 +163,8 @@ def grad(theta, X, y, lam):
     theta = theta.reshape(len(theta), 1)
     pred = sigmoid(np.dot(X, theta)).reshape(m, 1)
     error = np.dot(X.T, (pred - y))
-    ret = (error/m + 1.0*lam/m*theta)
-    ret[0] -= lam/m*theta[0]
+    ret = error/m + 1.0*lam/m*theta
+    ret[0] -= 1.0*lam/m*theta[0]
     return ret.flatten()
 
 
