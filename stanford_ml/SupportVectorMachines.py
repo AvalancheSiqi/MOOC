@@ -20,8 +20,8 @@ def main():
     # == == == == == == = Part 2: Training Linear SVM == == == == == == == == = #
     print "Training Linear SVM ...\n"
     C = 1
-    # model1 = train_svm(X1, y1, C, 'linear', 1e-3, 20)
-    # visualize_boundary_linear(p1, X1, model1)
+    model1 = train_svm(X1, y1, C, linear_kernel, tol=1e-3, max_iter=20)
+    visualize_boundary_linear(p1, X1, model1)
 
     # == == == == == = Part 3: Training SVM with RBF Kernel == == == == == == = #
     print "Loading and Visualizing Data 2 ...\n"
@@ -29,17 +29,29 @@ def main():
     p2 = fig.add_subplot(132)
     plot_data(p2, X2, y2)
 
-    print "Training Gaussian SVM ...\n"
+    print "Training Gaussian SVM model2 ...\n"
     C = 1
-    model2 = train_svm(X2, y2, C, 'gaussian')
-    np.savetxt('temp.txt', np.hstack((predict_svm(X2, model2), y2)))
-    # visualize_boundary(p2, X2, y2, model2)
+    sigma = 0.1
+    model2 = train_svm(X2, y2, C, gaussian_kernel, sigma=sigma)
+    visualize_boundary(p2, X2, model2)
 
     # == == == == == = Part 4: Training SVM with RBF Kernel == == == == == == = #
     print "Loading and Visualizing Data 3 ...\n"
-    X3, y3 = load_data('datasets/ex6data3.mat')
+    dataset = sio.loadmat('datasets/ex6data3.mat')
+    X3 = dataset['X']
+    y3 = dataset['y']
+    y3 = y3.astype('int8')
+    Xval3 = dataset['Xval']
+    yval3 = dataset['yval']
+    yval3 = yval3.astype('int8')
     p3 = fig.add_subplot(133)
     plot_data(p3, X3, y3)
+
+    print "Training Gaussian SVM model3 ...\n"
+    C, sigma = select_best_param(X3, y3, Xval3, yval3)
+    model3 = train_svm(X3, y3, C, gaussian_kernel, sigma=sigma)
+    print "Best parameters for dataset3 are C: %f, sigma: %f\n" % (C, sigma)
+    visualize_boundary(p3, X3, model3)
 
     plt.tight_layout()
     plt.show()
@@ -47,6 +59,9 @@ def main():
 
 
 def load_data(path):
+    """
+    Load dataset from mat file, convert y to int8 type
+    """
     dataset = sio.loadmat(path)
     X = dataset['X']
     y = dataset['y']
@@ -55,6 +70,9 @@ def load_data(path):
 
 
 def plot_data(p, X, y):
+    """
+    Plot scatter data X with label y on picture p
+    """
     pos = np.where(y == 1)
     neg = np.where(y == 0)
     p.scatter(X[pos[0]].T[0], X[pos[0]].T[1], marker='o', c='g')
@@ -63,22 +81,40 @@ def plot_data(p, X, y):
 
 
 class Model:
-    def __init__(self, X, y, w, b, alphas, kernel):
+    """
+    Model class, store weights, bias and kernel function, etc.
+    """
+    def __init__(self, X, y, w, b, alphas, kernel, sigma):
         self.X = X
         self.y = y
         self.w = w
         self.b = b
         self.alphas = alphas
         self.kernel = kernel
+        self.sigma = sigma
 
 
-def gaussian_kernel(x1, x2, sigma=None):
-    if not sigma:
-        sigma = 0.1
+def linear_kernel(x1, x2):
+    m = x1.size
+    return np.dot(x1.reshape(1, m), x2.reshape(m, 1))
+
+
+def gaussian_kernel(x1, x2, sigma):
     return np.exp(-(x1-x2)**2/2.0/(sigma**2))
 
 
-def train_svm(X, y, C, kernel, tol=None, max_iter=None):
+def train_svm(X, y, C, kernel, sigma=None, tol=None, max_iter=None):
+    """
+    Trains an SVM classifier using a simplified version of the SMO algorithm.
+    :param X: Matrix of training examples
+    :param y: Column matrix containing 1 for positive examples and 0 for negative examples
+    :param C: Standard SVM regularization parameter
+    :param kernel: Kernel function
+    :param sigma: Sigma variable used in Gaussian Kernel
+    :param tol: Tolerance value used for determining equality of floating point numbers
+    :param max_iter: Number of iterations over the dataset
+    :return: A trained SVM classifier stored in Model model
+    """
     if not tol:
         tol = 1e-3
     if not max_iter:
@@ -96,15 +132,16 @@ def train_svm(X, y, C, kernel, tol=None, max_iter=None):
     H = 0
     passes = 0
 
-    if kernel == 'linear':
+    if kernel.__name__ == 'linear_kernel':
         K = X.dot(X.T)
-    if kernel == 'gaussian':
-        sigma = 0.1
+    if kernel.__name__ == 'gaussian_kernel':
+        if not sigma:
+            sigma = 0.1
         X2 = np.sum(X**2, axis=1).reshape(m, 1)
         K = X2 + X2.T - 2*X.dot(X.T)
         K = gaussian_kernel(1, 0, sigma)**K
-    print "train SVM..."
 
+    print "train SVM..."
     while passes < max_iter:
         num_changed_alphas = 0
         for i in range(m):
@@ -159,32 +196,57 @@ def train_svm(X, y, C, kernel, tol=None, max_iter=None):
         else:
             passes = 0
 
-    print "DONE training SVM...\n"
-
     idx = (alphas > 0).ravel()
     w = (X.T).dot(alphas*y2)
-    model = Model(X[idx], y2[idx], w, b, alphas[idx], kernel)
+    model = Model(X[idx], y2[idx], w, b, alphas[idx], kernel, sigma)
     return model
 
 
 def predict_svm(X, model):
+    """
+    A vector of predictions using a trained SVM model (svmTrain)
+    :param X: A mxn matrix where there each example is a row
+    :param model: A svm model returned from svmTrain
+    :return: A m x 1 column of predictions of {0, 1} values
+    """
     m = X.shape[0]
     p = np.zeros(shape=(m, 1))
-    if model.kernel == 'linear':
+    if model.kernel.__name__ == 'linear_kernel':
         p = X.dot(model.w) + model.b
-    if model.kernel == 'gaussian':
+    if model.kernel.__name__ == 'gaussian_kernel':
         m2 = model.X.shape[0]
         X1 = np.sum(X**2, axis=1).reshape(m, 1)
         X2 = np.sum(model.X**2, axis=1).reshape(1, m2)
         K = X1 + (X2-2*X.dot(model.X.T))
-        K = gaussian_kernel(1, 0)**K
+        K = gaussian_kernel(1, 0, model.sigma)**K
         K = np.multiply(model.y.T, K)
         K = np.multiply(model.alphas.T, K)
         p = np.sum(K, axis=1)
     return (p >= 0).astype(int).reshape(m, 1)
 
 
+def select_best_param(X, y, Xval, yval):
+    """
+    Select the optimal (C, sigma) learning parameters to use for SVM with RBF kernel
+    """
+    values = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
+    opt_err = float("inf")
+    for i in values:
+        for j in values:
+            model = train_svm(X, y, i, gaussian_kernel, sigma=j)
+            predictions = predict_svm(Xval, model)
+            pred_err = np.mean(predictions != yval)
+            if opt_err > pred_err:
+                opt_err = pred_err
+                C = i
+                sigma = j
+    return C, sigma
+
+
 def visualize_boundary_linear(p, X, model):
+    """
+    plots a linear decision boundary learned by the SVM
+    """
     w = model.w
     b = model.b
     xp = np.linspace(min(X[:, 0]), max(X[:, 0]), 100)
@@ -193,9 +255,19 @@ def visualize_boundary_linear(p, X, model):
     return
 
 
-def visualize_boundary(p, X, y, model):
-    w = model.w
-    b = model.b
+def visualize_boundary(p, X, model):
+    """
+    Plot a non-linear decision boundary learned by the SVM
+    """
+    x1plot = np.linspace(min(X[:, 0]), max(X[:, 0]), 100).T
+    x2plot = np.linspace(min(X[:, 1]), max(X[:, 1]), 100).T
+    X1, X2 = np.meshgrid(x1plot, x2plot)
+    m = X1.shape[0]
+    vals = np.zeros(shape=X1.shape)
+    for i in range(X1.shape[1]):
+        this_X = np.hstack((X1[:, i].reshape(m, 1), X2[:, i].reshape(m, 1)))
+        vals[:, i] = predict_svm(this_X, model).ravel()
+    p.contour(X1, X2, vals, colors='b')
     return
 
 
