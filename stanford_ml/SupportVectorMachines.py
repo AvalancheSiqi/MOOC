@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.io as sio
 from math import ceil
 import random
+import sys
 
 # Machine Learning by Andrew Ng on Coursera week 6
 # Support vector machines (SVMs) with various example 2D datasets
@@ -61,9 +62,8 @@ def load_data(path):
     Load dataset from mat file, convert y to int8 type
     """
     dataset = sio.loadmat(path)
-    X = dataset['X']
-    y = dataset['y']
-    y = y.astype('int8')
+    X = dataset['X'].astype(float)
+    y = dataset['y'].astype('int8')
     return X, y
 
 
@@ -139,7 +139,9 @@ def train_svm(X, y, C, kernel, sigma=None, tol=None, max_iter=None):
         K = X2 + X2.T - 2*X.dot(X.T)
         K = gaussian_kernel(1, 0, sigma)**K
 
-    print "train SVM..."
+    sys.stdout.write("train SVM...")
+    sys.stdout.flush()
+    dots = 12
     while passes < max_iter:
         num_changed_alphas = 0
         for i in range(m):
@@ -194,6 +196,14 @@ def train_svm(X, y, C, kernel, sigma=None, tol=None, max_iter=None):
         else:
             passes = 0
 
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        dots += 1
+        if dots > 78:
+            dots = 0
+            print
+
+    print
     idx = (alphas > 0).ravel()
     w = (X.T).dot(alphas*y2)
     model = Model(X[idx], y2[idx], w, b, alphas[idx], kernel, sigma)
