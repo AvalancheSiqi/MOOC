@@ -38,12 +38,10 @@ def main():
     # == == == == == = Part 4: Training SVM with RBF Kernel == == == == == == = #
     print "Loading and Visualizing Data 3 ...\n"
     dataset = sio.loadmat('datasets/ex6data3.mat')
-    X3 = dataset['X']
-    y3 = dataset['y']
-    y3 = y3.astype('int8')
-    Xval3 = dataset['Xval']
-    yval3 = dataset['yval']
-    yval3 = yval3.astype('int8')
+    X3 = dataset['X'].astype(float)
+    y3 = dataset['y'].astype('int8')
+    Xval3 = dataset['Xval'].astype(float)
+    yval3 = dataset['yval'].astype('int8')
     p3 = fig.add_subplot(133)
     plot_data(p3, X3, y3)
 
